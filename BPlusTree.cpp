@@ -494,3 +494,46 @@ void BPT::Balance() {
   //合并
   Merge();
 }
+
+void BPT::Remove(const Data &dt) {
+  if (root == 0) {
+    //空树
+    return;
+  }
+  cur_idx = root;
+  tree.read(cur, root, 1);
+  while (!cur.is_leaf) {
+    int i = lower_bound(0, cur.size - 1, dt, cur);
+    cur_idx = cur.child[i];
+    tree.read(cur, cur_idx, 1);
+  }
+  //cur到了叶节点
+  int i = lower_bound(0, cur.size - 1, dt, cur);
+  if (cur.data[i] != dt) {
+    //不存在
+    return;
+  } else {
+    for (int m = i; m <= cur.size - 2; m++) {
+      cur.data[m] = cur.data[m + 1];
+    }
+    cur.size--;
+    tree.write(cur, cur_idx, 1);
+    Data new_dt = cur.data[cur.size - 1];
+    Node tmp;
+    int tmp_idx = cur.parent;
+    while (tmp_idx != -1) {
+      //std::cerr << "modify the index in parents!\n";
+      //为节点最大键，需修改父索引
+      tree.read(tmp, tmp_idx, 1);
+      int p = lower_bound(0, tmp.size - 1, dt, tmp);
+      if (tmp.data[p] == dt) {
+        tmp.data[p] = new_dt;
+        tree.write(tmp, tmp_idx, 1);
+        tmp_idx = tmp.parent;
+      } else break;
+    }
+    if (cur.size < MAX_SIZE / 2) {
+      Balance(); //对cur进行平衡操作
+    }
+  }
+}
