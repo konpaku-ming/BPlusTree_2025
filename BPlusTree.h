@@ -1,5 +1,5 @@
-#ifndef TOOL_H
-#define TOOL_H
+#ifndef BPlusTree_H
+#define BPlusTree_H
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -10,6 +10,7 @@ constexpr int MAX_SIZE = 20;
 
 class BPT;
 
+//MemoryRiver,用于绑定文件并提供一些操作
 template<class T, int info_len>
 class MemoryRiver {
   friend BPT;
@@ -77,10 +78,6 @@ public:
     int position = idx;
     file.seekg(position, std::ios::beg);
     file.read(reinterpret_cast<char *>(&t), sizeofT * size);
-  }
-
-  void flush() {
-    file.flush();
   }
 };
 
@@ -163,4 +160,4 @@ public:
 
   void Remove(const Data &);
 };
-#endif //TOOL_H
+#endif //BPlusTree

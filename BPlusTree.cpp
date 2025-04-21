@@ -469,6 +469,7 @@ void BPT::Merge() {
   }
 }
 
+//完成修改操作后，若cur失衡则Balance
 void BPT::Balance() {
   if (cur.parent == -1) {
     if (cur.size == 0) {
