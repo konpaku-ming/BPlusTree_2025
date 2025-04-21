@@ -468,3 +468,29 @@ void BPT::Merge() {
     //该情况不应出现
   }
 }
+
+void BPT::Balance() {
+  if (cur.parent == -1) {
+    if (cur.size == 0) {
+      root = 0;
+    }
+    if (!cur.is_leaf && cur.size == 1) {
+      root = cur.child[0];
+      Node tmp;
+      tree.read(tmp, cur.child[0], 1);
+      tmp.parent = -1;
+      tree.write(tmp, cur.child[0], 1);
+    }
+    return;
+  }
+  if (LeftBorrow()) {
+    //左借成功
+    return;
+  }
+  if (RightBorrow()) {
+    //右借成功
+    return;
+  }
+  //合并
+  Merge();
+}
