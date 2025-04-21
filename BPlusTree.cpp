@@ -269,3 +269,202 @@ void BPT::Find(char key[70]) {
   }
   cout << "\n";
 }
+
+bool BPT::LeftBorrow() {
+  //从cur的左边借个元素
+  if (cur.parent == -1) {
+    return false;
+  }
+  if (cur.size == 0) {
+    return false;
+  }
+  int fa_idx = cur.parent;
+  Node fa;
+  tree.read(fa, fa_idx, 1);
+  Data dt = cur.data[cur.size - 1];
+  int i = lower_bound(0, fa.size - 1, dt, fa); //找到cur在父节点里的位置
+  if (i == 0) {
+    //在最左边
+    return false;
+  } else {
+    Node sibling;
+    int sibling_idx = fa.child[i - 1];
+    tree.read(sibling, sibling_idx, 1);
+    if (sibling.size <= MAX_SIZE / 2) {
+      return false;
+    } else {
+      for (int m = cur.size - 1; m >= 0; m--) {
+        cur.data[m + 1] = cur.data[m];
+        cur.child[m + 1] = cur.child[m];
+      }
+      cur.data[0] = sibling.data[sibling.size - 1];
+      cur.child[0] = sibling.child[sibling.size - 1];
+      cur.size++;
+      if (!cur.is_leaf) {
+        Node son;
+        tree.read(son, cur.child[0], 1);
+        son.parent = cur_idx;
+        tree.write(son, cur.child[0], 1);
+      }
+      //移动数据
+      sibling.size--;
+      fa.data[i - 1] = sibling.data[sibling.size - 1];
+      tree.write(cur, cur_idx, 1);
+      tree.write(sibling, sibling_idx, 1);
+      tree.write(fa, fa_idx, 1);
+      return true;
+    }
+  }
+}
+
+bool BPT::RightBorrow() {
+  //从cur的右边借个元素
+  if (cur.parent == -1) {
+    return false;
+  }
+  if (cur.size == 0) {
+    return false;
+  }
+  int fa_idx = cur.parent;
+  Node fa;
+  tree.read(fa, fa_idx, 1);
+  Data dt = cur.data[cur.size - 1];
+  int i = lower_bound(0, fa.size - 1, dt, fa); //找到cur在父节点里的位置
+  if (i == fa.size - 1) {
+    //在最右边
+    return false;
+  } else {
+    Node sibling;
+    int sibling_idx = fa.child[i + 1];
+    tree.read(sibling, sibling_idx, 1);
+    if (sibling.size <= MAX_SIZE / 2) {
+      return false;
+    } else {
+      cur.data[cur.size] = sibling.data[0];
+      cur.child[cur.size] = sibling.child[0];
+      cur.size++;
+      for (int m = 0; m <= sibling.size - 2; m++) {
+        sibling.data[m] = sibling.data[m + 1];
+        sibling.child[m] = sibling.child[m + 1];
+      }
+      sibling.size--;
+      if (!cur.is_leaf) {
+        Node son;
+        tree.read(son, cur.child[cur.size - 1], 1);
+        son.parent = cur_idx;
+        tree.write(son, cur.child[cur.size - 1], 1);
+      }
+      //移动数据
+      fa.data[i] = cur.data[cur.size - 1];
+      tree.write(cur, cur_idx, 1);
+      tree.write(sibling, sibling_idx, 1);
+      tree.write(fa, fa_idx, 1);
+      return true;
+    }
+  }
+}
+
+void BPT::Merge() {
+  if (cur.parent == -1) {
+    return;
+  }
+  int fa_idx = cur.parent;
+  Node fa;
+  tree.read(fa, fa_idx, 1);
+  Data dt = cur.data[cur.size - 1];
+  int i = lower_bound(0, fa.size - 1, dt, fa); //找到cur在父节点里的位置
+  if (i != 0) {
+    //与左边合并
+    Node sibling;
+    int sibling_idx = fa.child[i - 1];
+    tree.read(sibling, sibling_idx, 1);
+    if (!cur.is_leaf) {
+      Node son;
+      for (int m = 0; m <= cur.size - 1; m++) {
+        tree.read(son, cur.child[m], 1);
+        son.parent = sibling_idx;
+        tree.write(son, cur.child[m], 1);
+      }
+    }
+    //合并非叶节点时，其儿子的父指针要修改掉
+    for (int m = 0; m <= cur.size - 1; m++) {
+      sibling.data[sibling.size + m] = cur.data[m];
+      sibling.child[sibling.size + m] = cur.child[m];
+    }
+    sibling.size += cur.size;
+    cur.size = 0;
+    //合并数据
+    sibling.right = cur.right;
+    if (cur.right != -1) {
+      Node tmp;
+      tree.read(tmp, cur.right, 1);
+      tmp.left = sibling_idx;
+      tree.write(tmp, cur.right, 1);
+    }
+    //维护叶节点链
+    for (int m = i; m <= fa.size - 2; m++) {
+      fa.data[m] = fa.data[m + 1];
+      fa.child[m] = fa.child[m + 1];
+    }
+    fa.size--;
+    fa.data[i - 1] = sibling.data[sibling.size - 1];
+    tree.write(sibling, sibling_idx, 1);
+    tree.write(fa, fa_idx, 1);
+    //修改父节点中索引
+    if (fa.size < MAX_SIZE / 2) {
+      //父亲需平衡
+      cur_idx = fa_idx;
+      tree.read(cur, fa_idx, 1);
+      Balance();
+    }
+    return;
+  }
+  if (i != fa.size - 1) {
+    //与右边合并
+    Node sibling;
+    int sibling_idx = fa.child[i + 1];
+    tree.read(sibling, sibling_idx, 1);
+    if (!sibling.is_leaf) {
+      Node son;
+      for (int m = 0; m <= sibling.size - 1; m++) {
+        tree.read(son, sibling.child[m], 1);
+        son.parent = cur_idx;
+        tree.write(son, sibling.child[m], 1);
+      }
+    }
+    //合并非叶节点时，其儿子的父指针要修改掉
+    for (int m = 0; m < sibling.size; m++) {
+      cur.data[cur.size + m] = sibling.data[m];
+      cur.child[cur.size + m] = sibling.child[m];
+    }
+    cur.size += sibling.size;
+    //合并数据
+    cur.right = sibling.right;
+    if (sibling.right != -1) {
+      Node tmp;
+      tree.read(tmp, sibling.right, 1);
+      tmp.left = cur_idx;
+      tree.write(tmp, sibling.right, 1);
+    }
+    //维护叶节点链
+    for (int m = i + 1; m <= fa.size - 2; m++) {
+      fa.data[m] = fa.data[m + 1];
+      fa.child[m] = fa.child[m + 1];
+    }
+    fa.size--;
+    fa.data[i] = cur.data[cur.size - 1];
+    tree.write(cur, cur_idx, 1);
+    tree.write(fa, fa_idx, 1);
+    //修改父节点中索引
+    if (fa.size < MAX_SIZE / 2) {
+      //父亲需平衡
+      cur_idx = fa_idx;
+      tree.read(cur, fa_idx, 1);
+      Balance();
+    }
+    return;
+  } else {
+    std::cerr << "Cannot Merge!\n";
+    //该情况不应出现
+  }
+}
